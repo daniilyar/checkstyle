@@ -53,6 +53,9 @@ public class DefaultLogger
     /** close error stream after use */
     private final boolean mCloseError;
 
+    // StringBuffer object recreation is avoided by clearing it before building new message
+    StringBuilder sb = new StringBuilder(4096); 
+    
     /**
      * Creates a new <code>DefaultLogger</code> instance.
      * @param aOS where to log infos and errors
@@ -91,31 +94,29 @@ public class DefaultLogger
      * @param aEvt {@inheritDoc}
      * @see AuditListener
      **/
-    public void addError(AuditEvent aEvt)
-    {
-        final SeverityLevel severityLevel = aEvt.getSeverityLevel();
-        if (!SeverityLevel.IGNORE.equals(severityLevel)) {
+	public void addError(AuditEvent aEvt) {
 
-            final String fileName = aEvt.getFileName();
-            final String message = aEvt.getMessage();
+        SeverityLevel severityLevel = aEvt.getSeverityLevel();
 
-            // avoid StringBuffer.expandCapacity
-            final int bufLen = fileName.length() + message.length()
-                + BUFFER_CUSHION;
-            final StringBuffer sb = new StringBuffer(bufLen);
-
-            sb.append(fileName);
-            sb.append(':').append(aEvt.getLine());
-            if (aEvt.getColumn() > 0) {
-                sb.append(':').append(aEvt.getColumn());
-            }
-            if (SeverityLevel.WARNING.equals(severityLevel)) {
-                sb.append(": warning");
-            }
-            sb.append(": ").append(message);
-            mErrorWriter.println(sb.toString());
+        if (severityLevel == SeverityLevel.IGNORE) {
+            return;
         }
-    }
+
+        String fileName = aEvt.getFileName();
+        String message = aEvt.getMessage();
+
+        sb.delete(0, sb.length()); // Clear StringBuilder's buffer array
+        sb.append(fileName).append(':').append(aEvt.getLine());
+
+        if (aEvt.getColumn() > 0) {
+            sb.append(':').append(aEvt.getColumn());
+        }
+        if (severityLevel == SeverityLevel.WARNING) {
+            sb.append(": warning");
+        }
+        sb.append(": ").append(message);
+        mErrorWriter.println(sb.toString());
+	}
 
     /** {@inheritDoc} */
     public void addException(AuditEvent aEvt, Throwable aThrowable)
