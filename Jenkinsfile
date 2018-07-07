@@ -5,6 +5,8 @@ DEFAULT_MAVEN_OPTS = "-Xss256k -Xmx300m -XX:MaxMetaspaceSize=80m -XX:MaxMetaspac
                      "-Dmaven.test.failure.ignore=false -XshowSettings:vm " + 
                      "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
 
+BRANCH_NAME = '<unknown>'
+
 enum HyperSize {
   S4("s4"),
   M1("m1"),
@@ -79,6 +81,19 @@ pipeline {
     stage ("Initial") {
       steps {
         echo GREEN("${getCauseDescription(currentBuild)}")
+        
+        script {
+            BRANCH_NAME = sh(returnStdout: true, script: "git symbolic-ref --short HEAD 2>&1 | cat")
+            if (BRANCH_NAME.contains('Not a git repository')) {
+              // If no git branh is pre-fetched for the build to run on, then use master instead
+              BRANCH_NAME = 'master'
+            }
+        }
+
+        echo GREEN("Branch: $BRANCH_NAME")
+
+        // Print the build envvars
+        echo sh(returnStdout: true, script: 'env')
       }
     }
 
